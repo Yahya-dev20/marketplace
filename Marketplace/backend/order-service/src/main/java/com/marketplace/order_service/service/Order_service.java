@@ -4,6 +4,7 @@ package com.marketplace.order_service.service;
 import com.marketplace.order_service.dto.*;
 import com.marketplace.order_service.entity.*;
 import com.marketplace.order_service.repository.OrderRepository;
+import com.marketplace.order_service.client.OrderNotificationClient;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -25,16 +26,27 @@ public class Order_service {
     private final RestClient cartClient;
     private final RestClient catalogClient;
 
+    // Client pour envoyer les notifications
+    private final OrderNotificationClient notificationClient;
+
+    // Constructeur
     public Order_service(
             OrderRepository repository,
             @Value("${cart.service.url}") String cartUrl,
-            @Value("${catalog.service.url}") String catalogUrl) {
+            @Value("${catalog.service.url}") String catalogUrl,
+            OrderNotificationClient notificationClient) {
 
         this.repository = repository;
+
         this.cartClient = RestClient.builder()
-                .baseUrl(cartUrl).build();
+                .baseUrl(cartUrl)
+                .build();
+
         this.catalogClient = RestClient.builder()
-                .baseUrl(catalogUrl).build();
+                .baseUrl(catalogUrl)
+                .build();
+
+        this.notificationClient = notificationClient;
     }
 
     // Convertir une commande en reponse API
@@ -63,6 +75,7 @@ public class Order_service {
 
     // Recuperer le panier du client
     private CartResponse getCart(Long userId) {
+
         try {
             CartResponse cart = cartClient.get()
                 .uri("/api/carts/{userId}", userId)
@@ -77,6 +90,7 @@ public class Order_service {
             }
 
             return cart;
+
         } catch (RestClientException ex) {
             throw new ResponseStatusException(
                 HttpStatus.BAD_GATEWAY,
@@ -87,6 +101,7 @@ public class Order_service {
 
     // Recuperer un produit du catalogue
     private CatalogProduct getProduct(Long productId) {
+
         try {
             CatalogProduct product = catalogClient.get()
                 .uri("/api/catalog/products/{id}", productId)
@@ -95,6 +110,7 @@ public class Order_service {
 
             if (product == null || product.price() == null
                     || product.stock() == null) {
+
                 throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY,
                     "Reponse invalide du catalogue"
@@ -102,6 +118,7 @@ public class Order_service {
             }
 
             return product;
+
         } catch (RestClientException ex) {
             throw new ResponseStatusException(
                 HttpStatus.BAD_GATEWAY,
@@ -110,7 +127,7 @@ public class Order_service {
         }
     }
 
-    // Creer une commande depuis le panier
+    // CREER UNE COMMANDE
     @Transactional
     public OrderResponse createOrder(Long userId) {
 
@@ -174,16 +191,26 @@ public class Order_service {
         order.setCreatedAt(LocalDateTime.now());
         order.setItems(lines);
 
-        return toResponse(repository.save(order));
+        CustomerOrder saved = repository.save(order);
+
+        // Notification apres enregistrement de la commande
+        notificationClient.sendAfterCommit(
+            saved,
+            "ORDER_CREATED",
+            "Votre commande #" + saved.getId() + " a ete creee."
+        );
+
+        return toResponse(saved);
     }
 
-    // Consulter une commande
+    // CONSULTER UNE COMMANDE
     @Transactional(readOnly = true)
     public OrderResponse getOrder(Long id) {
         return toResponse(findOrder(id));
     }
 
     private CustomerOrder findOrder(Long id) {
+
         return repository.findById(id)
             .orElseThrow(() ->
                 new ResponseStatusException(
@@ -193,16 +220,17 @@ public class Order_service {
             );
     }
 
-    // Historique des commandes
+    // HISTORIQUE DES COMMANDES
     @Transactional(readOnly = true)
     public List<OrderResponse> getUserOrders(Long userId) {
+
         return repository.findByUserId(userId)
             .stream()
             .map(this::toResponse)
             .toList();
     }
 
-    // Paiement simule
+    // PAIEMENT SIMULE
     @Transactional
     public OrderResponse simulatePayment(
             Long orderId, boolean success) {
@@ -216,14 +244,27 @@ public class Order_service {
             );
         }
 
-        order.setStatus(success
-            ? OrderStatus.PAID
-            : OrderStatus.PAYMENT_FAILED);
+        order.setStatus(
+            success
+                ? OrderStatus.PAID
+                : OrderStatus.PAYMENT_FAILED
+        );
 
-        return toResponse(repository.save(order));
+        CustomerOrder saved = repository.save(order);
+
+        // Notification paiement
+        notificationClient.sendAfterCommit(
+            saved,
+            success ? "PAYMENT_SUCCESS" : "PAYMENT_FAILED",
+            success
+                ? "Paiement accepte pour la commande #" + saved.getId()
+                : "Paiement refuse pour la commande #" + saved.getId()
+        );
+
+        return toResponse(saved);
     }
 
-    // Expedition de la commande
+    // EXPEDIER UNE COMMANDE
     @Transactional
     public OrderResponse shipOrder(Long orderId) {
 
@@ -237,10 +278,20 @@ public class Order_service {
         }
 
         order.setStatus(OrderStatus.SHIPPED);
-        return toResponse(repository.save(order));
+
+        CustomerOrder saved = repository.save(order);
+
+        // Notification expedition
+        notificationClient.sendAfterCommit(
+            saved,
+            "ORDER_SHIPPED",
+            "Votre commande #" + saved.getId() + " a ete expediee."
+        );
+
+        return toResponse(saved);
     }
 
-    // Livraison de la commande
+    // LIVRER UNE COMMANDE
     @Transactional
     public OrderResponse deliverOrder(Long orderId) {
 
@@ -254,6 +305,16 @@ public class Order_service {
         }
 
         order.setStatus(OrderStatus.DELIVERED);
-        return toResponse(repository.save(order));
+
+        CustomerOrder saved = repository.save(order);
+
+        // Notification livraison
+        notificationClient.sendAfterCommit(
+            saved,
+            "ORDER_DELIVERED",
+            "Votre commande #" + saved.getId() + " a ete livree."
+        );
+
+        return toResponse(saved);
     }
 }

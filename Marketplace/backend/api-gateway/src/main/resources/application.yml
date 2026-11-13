@@ -1,0 +1,52 @@
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+
+            # USER SERVICE
+            - id: user-service
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/users,/api/users/**
+
+            # CATALOG SERVICE
+            - id: catalog-service
+              uri: http://localhost:8082
+              predicates:
+                - Path=/api/catalog,/api/catalog/**
+
+            # CART SERVICE
+            - id: cart-service
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/carts,/api/carts/**
+
+            # ORDER SERVICE
+            - id: order-service
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/orders,/api/orders/**
+
+            # NOTIFICATION SERVICE
+            - id: notification-service
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/notifications,/api/notifications/**
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized

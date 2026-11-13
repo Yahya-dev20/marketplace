@@ -1,0 +1,270 @@
+
+pipeline {
+
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        booleanParam(
+            name: 'RUN_SECURITY_SCAN',
+            defaultValue: false,
+            description: 'Lancer OWASP Dependency-Check'
+        )
+    }
+
+    environment {
+        POSTGRES_HOST = 'marketplace-postgres'
+    }
+
+    stages {
+
+        stage('1 - Checkout GitHub') {
+            steps {
+                checkout scm
+                echo 'Code source recupere.'
+            }
+        }
+
+        stage('2 - Verification environnement') {
+            steps {
+                sh 'java -version'
+                sh 'git --version'
+            }
+        }
+
+        stage('3 - Compilation Java') {
+            steps {
+                sh '''
+                    set -e
+
+                    for service in \
+                        user-service \
+                        catalog-service \
+                        cart-service \
+                        order-service \
+                        notification-service \
+                        api-gateway
+                    do
+                        echo "Compilation : $service"
+
+                        (
+                            cd "backend/$service"
+                            sh ./mvnw -B -DskipTests compile
+                        )
+                    done
+                '''
+            }
+        }
+
+        stage('4 - Analyse qualite du code') {
+            steps {
+                sh '''
+                    set -e
+
+                    for service in \
+                        user-service \
+                        catalog-service \
+                        cart-service \
+                        order-service \
+                        notification-service \
+                        api-gateway
+                    do
+                        echo "Checkstyle : $service"
+
+                        (
+                            cd "backend/$service"
+
+                            sh ./mvnw -B \
+                              org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:checkstyle
+                        )
+                    done
+                '''
+            }
+        }
+
+        stage('5 - Verification des dependances') {
+            steps {
+                sh '''
+                    set -e
+
+                    for service in \
+                        user-service \
+                        catalog-service \
+                        cart-service \
+                        order-service \
+                        notification-service \
+                        api-gateway
+                    do
+                        echo "Dependances : $service"
+
+                        (
+                            cd "backend/$service"
+                            sh ./mvnw -B dependency:tree
+                        )
+                    done
+                '''
+            }
+        }
+
+        stage('6 - Analyse vulnerabilites OWASP') {
+            when {
+                expression {
+                    params.RUN_SECURITY_SCAN
+                }
+            }
+
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'nvd-api-key',
+                        variable: 'NVD_API_KEY'
+                    )
+                ]) {
+                    sh '''
+                        set -e
+
+                        for service in \
+                            user-service \
+                            catalog-service \
+                            cart-service \
+                            order-service \
+                            notification-service \
+                            api-gateway
+                        do
+                            echo "OWASP : $service"
+
+                            (
+                                cd "backend/$service"
+
+                                sh ./mvnw -B \
+                                  org.owasp:dependency-check-maven:13.0.0:check \
+                                  -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
+                                  -DdataDirectory=/var/jenkins_home/owasp-data \
+                                  -DfailBuildOnCVSS=7 \
+                                  -Dformat=HTML
+                            )
+                        done
+                    '''
+                }
+            }
+        }
+
+        stage('7 - Tests unitaires') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'marketplace-db-password',
+                        variable: 'DB_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        set -e
+
+                        for entry in \
+                            user-service:user_db \
+                            catalog-service:catalog_db \
+                            cart-service:cart_db \
+                            order-service:order_db
+                        do
+                            service=${entry%%:*}
+                            database=${entry#*:}
+
+                            echo "Tests unitaires : $service"
+
+                            (
+                                cd "backend/$service"
+
+                                SPRING_DATASOURCE_URL="jdbc:postgresql://$POSTGRES_HOST:5432/$database" \
+                                sh ./mvnw -B test
+                            )
+                        done
+
+                        for service in \
+                            notification-service \
+                            api-gateway
+                        do
+                            echo "Tests unitaires : $service"
+
+                            (
+                                cd "backend/$service"
+                                sh ./mvnw -B test
+                            )
+                        done
+                    '''
+                }
+            }
+        }
+
+        stage('8 - Tests integration PostgreSQL') {
+            steps {
+                withCredentials([
+                    string(
+                        credentialsId: 'marketplace-db-password',
+                        variable: 'DB_PASSWORD'
+                    )
+                ]) {
+                    dir('backend/user-service') {
+                        sh '''
+                            SPRING_DATASOURCE_URL="jdbc:postgresql://$POSTGRES_HOST:5432/user_db" \
+                            sh ./mvnw -B \
+                              org.apache.maven.plugins:maven-failsafe-plugin:3.6.0:integration-test \
+                              org.apache.maven.plugins:maven-failsafe-plugin:3.6.0:verify
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('9 - Packaging JAR') {
+            steps {
+                sh '''
+                    set -e
+
+                    for service in \
+                        user-service \
+                        catalog-service \
+                        cart-service \
+                        order-service \
+                        notification-service \
+                        api-gateway
+                    do
+                        echo "Packaging : $service"
+
+                        (
+                            cd "backend/$service"
+                            sh ./mvnw -B -DskipTests package
+                        )
+                    done
+                '''
+            }
+        }
+    }
+
+    post {
+
+        always {
+            junit(
+                testResults: 'backend/**/target/surefire-reports/*.xml,backend/**/target/failsafe-reports/TEST-*.xml',
+                allowEmptyResults: true
+            )
+
+            archiveArtifacts(
+                artifacts: 'backend/**/target/site/checkstyle.html,backend/**/target/dependency-check-report.html',
+                allowEmptyArchive: true
+            )
+        }
+
+        success {
+            echo 'SUCCESS : Pipeline CI terminee.'
+        }
+
+        failure {
+            echo 'FAILURE : consulter Console Output.'
+        }
+    }
+}
