@@ -6,15 +6,15 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
-        skipDefaultCheckout(true)
         buildDiscarder(logRotator(numToKeepStr: '10'))
+        skipDefaultCheckout(true)
     }
 
     parameters {
         booleanParam(
             name: 'RUN_SECURITY_SCAN',
             defaultValue: false,
-            description: 'Activer le scan OWASP'
+            description: 'Executer analyse OWASP'
         )
     }
 
@@ -24,267 +24,379 @@ pipeline {
 
     stages {
 
-        
+        // =====================================
+        // 1. RECUPERER LE CODE DEPUIS GITHUB
+        // =====================================
+
         stage('1 - Checkout GitHub') {
             steps {
+
                 checkout scm
 
-                dir('Marketplace') {
-                    sh 'pwd'
-                    sh 'ls -la'
-                    sh 'ls -la backend'
-                }
+                sh 'pwd'
+                sh 'ls -la'
+
+                // Verifier le vrai dossier
+                sh 'ls -la Marketplace/backend'
+
+                echo 'Checkout GitHub OK'
             }
         }
 
+        // =====================================
+        // 2. VERIFIER LA STRUCTURE
+        // =====================================
 
         stage('2 - Verification structure') {
             steps {
-                script {
-                    def services = [
-                        'user-service',
-                        'catalog-service',
-                        'cart-service',
-                        'order-service',
-                        'notification-service',
-                        'api-gateway'
-                    ]
 
-                    for (service in services) {
-                        dir("backend/${service}") {
-                            sh 'test -f pom.xml'
-                            sh 'test -f mvnw'
-                            echo "Structure OK : ${service}"
-                        }
-                    }
+                dir('Marketplace') {
+
+                    sh '''
+                        set -e
+
+                        for service in \
+                            user-service \
+                            catalog-service \
+                            cart-service \
+                            order-service \
+                            notification-service \
+                            api-gateway
+                        do
+                            echo "Verification : $service"
+
+                            test -f "backend/$service/pom.xml"
+                            test -f "backend/$service/mvnw"
+                        done
+                    '''
                 }
             }
         }
+
+        // =====================================
+        // 3. VERIFIER JAVA ET GIT
+        // =====================================
 
         stage('3 - Verification Java') {
             steps {
+
                 sh 'java -version'
                 sh 'git --version'
+
+                echo 'Environnement Java OK'
             }
         }
+
+        // =====================================
+        // 4. COMPILATION JAVA
+        // =====================================
 
         stage('4 - Compilation Java') {
             steps {
-                script {
-                    def services = [
-                        'user-service',
-                        'catalog-service',
-                        'cart-service',
-                        'order-service',
-                        'notification-service',
-                        'api-gateway'
-                    ]
 
-                    for (service in services) {
-                        dir("backend/${service}") {
-                            echo "Compilation : ${service}"
-                            sh 'sh ./mvnw -B -DskipTests compile'
-                        }
-                    }
+                dir('Marketplace') {
+
+                    sh '''
+                        set -e
+
+                        for service in \
+                            user-service \
+                            catalog-service \
+                            cart-service \
+                            order-service \
+                            notification-service \
+                            api-gateway
+                        do
+
+                            echo "Compilation : $service"
+
+                            (
+                                cd "backend/$service"
+
+                                sh ./mvnw -B \
+                                    -DskipTests compile
+                            )
+
+                        done
+                    '''
                 }
             }
         }
+
+        // =====================================
+        // 5. QUALITE DU CODE : CHECKSTYLE
+        // =====================================
 
         stage('5 - Analyse qualite Checkstyle') {
             steps {
-                script {
-                    def services = [
-                        'user-service',
-                        'catalog-service',
-                        'cart-service',
-                        'order-service',
-                        'notification-service',
-                        'api-gateway'
-                    ]
 
-                    for (service in services) {
-                        dir("backend/${service}") {
-                            echo "Checkstyle : ${service}"
+                dir('Marketplace') {
 
-                            sh '''
+                    sh '''
+                        set -e
+
+                        for service in \
+                            user-service \
+                            catalog-service \
+                            cart-service \
+                            order-service \
+                            notification-service \
+                            api-gateway
+                        do
+
+                            echo "Checkstyle : $service"
+
+                            (
+                                cd "backend/$service"
+
                                 sh ./mvnw -B \
-                                org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:checkstyle
-                            '''
-                        }
-                    }
+                                  org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:checkstyle
+                            )
+
+                        done
+                    '''
                 }
             }
         }
+
+        // =====================================
+        // 6. VERIFIER LES DEPENDANCES MAVEN
+        // =====================================
 
         stage('6 - Verification dependances') {
             steps {
-                script {
-                    def services = [
-                        'user-service',
-                        'catalog-service',
-                        'cart-service',
-                        'order-service',
-                        'notification-service',
-                        'api-gateway'
-                    ]
 
-                    for (service in services) {
-                        dir("backend/${service}") {
-                            echo "Dependances : ${service}"
-                            sh 'sh ./mvnw -B dependency:tree'
-                        }
-                    }
+                dir('Marketplace') {
+
+                    sh '''
+                        set -e
+
+                        for service in \
+                            user-service \
+                            catalog-service \
+                            cart-service \
+                            order-service \
+                            notification-service \
+                            api-gateway
+                        do
+
+                            echo "Dependances : $service"
+
+                            (
+                                cd "backend/$service"
+
+                                sh ./mvnw -B dependency:tree
+                            )
+
+                        done
+                    '''
                 }
             }
         }
 
+        // =====================================
+        // 7. ANALYSE SECURITE OWASP
+        // =====================================
+
         stage('7 - Analyse securite OWASP') {
+
             when {
                 expression {
-                    return params.RUN_SECURITY_SCAN
+                    params.RUN_SECURITY_SCAN
                 }
             }
 
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'nvd-api-key',
-                        variable: 'NVD_API_KEY'
-                    )
-                ]) {
-                    script {
-                        def services = [
-                            'user-service',
-                            'catalog-service',
-                            'cart-service',
-                            'order-service',
-                            'notification-service',
-                            'api-gateway'
-                        ]
 
-                        for (service in services) {
-                            dir("backend/${service}") {
-                                echo "OWASP : ${service}"
+                dir('Marketplace') {
 
-                                sh '''
+                    withCredentials([
+                        string(
+                            credentialsId: 'nvd-api-key',
+                            variable: 'NVD_API_KEY'
+                        )
+                    ]) {
+
+                        sh '''
+                            set -e
+
+                            for service in \
+                                user-service \
+                                catalog-service \
+                                cart-service \
+                                order-service \
+                                notification-service \
+                                api-gateway
+                            do
+
+                                echo "OWASP : $service"
+
+                                (
+                                    cd "backend/$service"
+
                                     sh ./mvnw -B \
-                                    org.owasp:dependency-check-maven:13.0.0:check \
-                                    -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
-                                    -DdataDirectory=/var/jenkins_home/owasp-data \
-                                    -DfailBuildOnCVSS=7 \
-                                    -Dformat=HTML
-                                '''
-                            }
-                        }
+                                      org.owasp:dependency-check-maven:13.0.0:check \
+                                      -DnvdApiKeyEnvironmentVariable=NVD_API_KEY \
+                                      -DdataDirectory=/var/jenkins_home/owasp-data \
+                                      -DfailBuildOnCVSS=7 \
+                                      -Dformat=HTML
+                                )
+
+                            done
+                        '''
                     }
                 }
             }
         }
+
+        // =====================================
+        // 8. TESTS UNITAIRES JUNIT
+        // =====================================
 
         stage('8 - Tests unitaires') {
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'marketplace-db-password',
-                        variable: 'DB_PASSWORD'
-                    )
-                ]) {
-                    script {
-                        def databases = [
-                            'user-service': 'user_db',
-                            'catalog-service': 'catalog_db',
-                            'cart-service': 'cart_db',
-                            'order-service': 'order_db'
-                        ]
 
-                        databases.each { service, database ->
-                            dir("backend/${service}") {
-                                echo "Tests : ${service}"
+                dir('Marketplace') {
 
-                                withEnv([
-                                    "SPRING_DATASOURCE_URL=jdbc:postgresql://marketplace-postgres:5432/${database}"
-                                ]) {
-                                    sh 'sh ./mvnw -B test'
-                                }
-                            }
-                        }
+                    withCredentials([
+                        string(
+                            credentialsId: 'marketplace-db-password',
+                            variable: 'DB_PASSWORD'
+                        )
+                    ]) {
 
-                        for (service in [
-                            'notification-service',
-                            'api-gateway'
-                        ]) {
-                            dir("backend/${service}") {
-                                echo "Tests : ${service}"
-                                sh 'sh ./mvnw -B test'
-                            }
-                        }
+                        sh '''
+                            set -e
+
+                            for entry in \
+                                user-service:user_db \
+                                catalog-service:catalog_db \
+                                cart-service:cart_db \
+                                order-service:order_db
+                            do
+
+                                service=${entry%%:*}
+                                database=${entry#*:}
+
+                                echo "Tests : $service"
+
+                                (
+                                    cd "backend/$service"
+
+                                    SPRING_DATASOURCE_URL="jdbc:postgresql://$POSTGRES_HOST:5432/$database" \
+                                    sh ./mvnw -B test
+                                )
+
+                            done
+
+                            for service in \
+                                notification-service \
+                                api-gateway
+                            do
+
+                                echo "Tests : $service"
+
+                                (
+                                    cd "backend/$service"
+
+                                    sh ./mvnw -B test
+                                )
+
+                            done
+                        '''
                     }
                 }
             }
         }
+
+        // =====================================
+        // 9. TEST INTEGRATION POSTGRESQL
+        // =====================================
 
         stage('9 - Tests integration PostgreSQL') {
             steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'marketplace-db-password',
-                        variable: 'DB_PASSWORD'
-                    )
-                ]) {
-                    dir('backend/user-service') {
 
-                        withEnv([
-                            'SPRING_DATASOURCE_URL=jdbc:postgresql://marketplace-postgres:5432/user_db'
-                        ]) {
-                            sh '''
-                                sh ./mvnw -B \
-                                org.apache.maven.plugins:maven-failsafe-plugin:3.6.0:integration-test \
-                                org.apache.maven.plugins:maven-failsafe-plugin:3.6.0:verify
-                            '''
-                        }
+                dir('Marketplace/backend/user-service') {
+
+                    withCredentials([
+                        string(
+                            credentialsId: 'marketplace-db-password',
+                            variable: 'DB_PASSWORD'
+                        )
+                    ]) {
+
+                        sh '''
+                            set -e
+
+                            SPRING_DATASOURCE_URL="jdbc:postgresql://$POSTGRES_HOST:5432/user_db" \
+                            sh ./mvnw -B \
+                              org.apache.maven.plugins:maven-failsafe-plugin:3.6.0:integration-test \
+                              org.apache.maven.plugins:maven-failsafe-plugin:3.6.0:verify
+                        '''
                     }
                 }
             }
         }
 
+        // =====================================
+        // 10. GENERATION DES FICHIERS JAR
+        // =====================================
+
         stage('10 - Packaging JAR') {
             steps {
-                script {
-                    def services = [
-                        'user-service',
-                        'catalog-service',
-                        'cart-service',
-                        'order-service',
-                        'notification-service',
-                        'api-gateway'
-                    ]
 
-                    for (service in services) {
-                        dir("backend/${service}") {
-                            echo "Packaging : ${service}"
-                            sh 'sh ./mvnw -B -DskipTests package'
-                        }
-                    }
+                dir('Marketplace') {
+
+                    sh '''
+                        set -e
+
+                        for service in \
+                            user-service \
+                            catalog-service \
+                            cart-service \
+                            order-service \
+                            notification-service \
+                            api-gateway
+                        do
+
+                            echo "Packaging : $service"
+
+                            (
+                                cd "backend/$service"
+
+                                sh ./mvnw -B \
+                                    -DskipTests package
+                            )
+
+                        done
+                    '''
                 }
             }
         }
     }
 
+    // =====================================
+    // RAPPORTS ET RESULTATS
+    // =====================================
+
     post {
+
         always {
+
             junit(
-                testResults: 'backend/**/target/surefire-reports/TEST-*.xml,backend/**/target/failsafe-reports/TEST-*.xml',
-                allowEmptyResults: true
+                testResults: 'Marketplace/backend/**/target/surefire-reports/TEST-*.xml,Marketplace/backend/**/target/failsafe-reports/TEST-*.xml',
+                allowEmptyResults: true,
+                skipPublishingChecks: true
             )
 
             archiveArtifacts(
-                artifacts: 'backend/**/target/site/checkstyle.html,backend/**/target/dependency-check-report.html',
+                artifacts: 'Marketplace/backend/**/target/site/checkstyle.html,Marketplace/backend/**/target/dependency-check-report.html,Marketplace/backend/**/target/*.jar',
                 allowEmptyArchive: true
             )
         }
 
         success {
-            echo 'SUCCESS : Pipeline CI terminee.'
+            echo 'SUCCESS : CI DevOps-M terminee.'
         }
 
         failure {
