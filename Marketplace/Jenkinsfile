@@ -24,14 +24,19 @@ pipeline {
 
     stages {
 
+        
         stage('1 - Checkout GitHub') {
             steps {
                 checkout scm
-                sh 'pwd'
-                sh 'ls -la'
-                sh 'ls -la backend'
+
+                dir('Marketplace') {
+                    sh 'pwd'
+                    sh 'ls -la'
+                    sh 'ls -la backend'
+                }
             }
         }
+
 
         stage('2 - Verification structure') {
             steps {
