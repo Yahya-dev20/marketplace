@@ -373,6 +373,83 @@ pipeline {
                 }
             }
         }
+        
+        // =====================================
+        // 11. INSTALLATION FRONTEND
+        // =====================================
+
+        stage('11 - Installation Frontend') {
+            steps {
+                dir('Marketplace/frontend') {
+
+                    nodejs(nodeJSInstallationName: 'nodejs-24') {
+                        sh '''
+                            node --version
+                            npm --version
+                            npm ci
+                        '''
+                    }
+                }
+            }
+        }
+
+        // =====================================
+        // 12. QUALITE FRONTEND
+        // =====================================
+
+        stage('12 - Analyse qualite Frontend') {
+            steps {
+                dir('Marketplace/frontend') {
+
+                    nodejs(nodeJSInstallationName: 'nodejs-24') {
+                        sh 'npm run lint'
+                    }
+                }
+            }
+        }
+
+        // =====================================
+        // 13. TESTS FRONTEND
+        // =====================================
+
+        stage('13 - Tests Frontend') {
+            steps {
+                dir('Marketplace/frontend') {
+
+                    nodejs(nodeJSInstallationName: 'nodejs-24') {
+                        sh 'npm run test'
+                    }
+                }
+            }
+        }
+
+        // =====================================
+        // 14. BUILD FRONTEND
+        // =====================================
+
+        stage('14 - Build Frontend') {
+            steps {
+                dir('Marketplace/frontend') {
+
+                    nodejs(nodeJSInstallationName: 'nodejs-24') {
+                        sh 'npm run build'
+                    }
+                }
+            }
+        }
+
+        stage('Securite dependances Frontend') {
+            steps {
+                dir('Marketplace/frontend') {
+
+                    nodejs(nodeJSInstallationName: 'nodejs-24') {
+                        sh 'npm audit --audit-level=high'
+                    }
+                }
+            }
+        }
+
+
     }
 
     // =====================================
