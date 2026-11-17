@@ -1,55 +1,41 @@
 
-import { afterEach, expect, test, vi } from 'vitest'
+import { expect, test } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import App from './App'
 
-afterEach(() => {
-  vi.unstubAllGlobals()
+test('affiche la page accueil', () => {
+  render(
+    <MemoryRouter initialEntries={['/']}>
+      <App />
+    </MemoryRouter>
+  )
+
+  expect(
+    screen.getByText('Découvrez notre marketplace multi-vendeurs')
+  ).toBeInTheDocument()
 })
 
-test('affiche les produits du catalogue', async () => {
-
-  const products = [
-    {
-      id: 1,
-      name: 'PC Lenovo ThinkPad',
-      description: 'Ordinateur professionnel',
-      price: 7500,
-      stock: 10,
-      shop: {
-        id: 1,
-        name: 'Boutique Atlas',
-      },
-      category: {
-        id: 1,
-        name: 'Informatique',
-      },
-    },
-  ]
-
-  // Simuler la reponse de Catalog Service
-  const fetchMock = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => products,
-  })
-
-  vi.stubGlobal('fetch', fetchMock)
-
-  // Afficher notre composant React
-  render(<App />)
-
-  // Verifier le titre de notre marketplace
-  expect(
-    screen.getByText('DevOps-M Marketplace')
-  ).toBeInTheDocument()
-
-  // Verifier que le produit apparait
-  expect(
-    await screen.findByText('PC Lenovo ThinkPad')
-  ).toBeInTheDocument()
-
-  // Verifier que l'API est appelee
-  expect(fetchMock).toHaveBeenCalledWith(
-    '/api/catalog/products'
+test('affiche la page panier', () => {
+  render(
+    <MemoryRouter initialEntries={['/cart']}>
+      <App />
+    </MemoryRouter>
   )
+
+  expect(
+    screen.getByRole('heading', { name: 'Mon panier' })
+  ).toBeInTheDocument()
+})
+
+test('affiche une page 404', () => {
+  render(
+    <MemoryRouter initialEntries={['/page-inexistante']}>
+      <App />
+    </MemoryRouter>
+  )
+
+  expect(
+    screen.getByText('404 — Page introuvable')
+  ).toBeInTheDocument()
 })
