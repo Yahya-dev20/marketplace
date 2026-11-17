@@ -1,64 +1,132 @@
-
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
-import { getProduct } from '../services/catalogApi'
-import type { Product } from '../types/catalog'
-
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router";
+import { getProduct } from "../services/catalogApi";
+import type { Product } from "../types/catalog";
+import Icon from "../components/Icon";
+import EmptyState from "../components/EmptyState";
+import { formatPrice } from "../utils/format";
+type Result = { id: number; product?: Product; error?: string };
 export default function ProductDetailsPage() {
-  const { id } = useParams()
-  const [product, setProduct] = useState<Product | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-
+  const { id } = useParams();
+  const productId = Number(id);
+  const valid = Number.isSafeInteger(productId) && productId > 0;
+  const [result, setResult] = useState<Result | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    const productId = Number(id)
-
-    if (!Number.isSafeInteger(productId) || productId <= 0) {
-      return
-    }
-
+    if (!valid) return;
+    let active = true;
     getProduct(productId)
-      .then(setProduct)
-      .catch(() => setError('Produit introuvable.'))
-      .finally(() => setLoading(false))
-  }, [id])
-
-  if (!id || !Number.isSafeInteger(Number(id)) || Number(id) <= 0) {
-    return <p>Identifiant de produit invalide.</p>
-  }
-
-  if (loading) return <p>Chargement du produit...</p>
-  if (error) return <p role="alert">{error}</p>
-  if (!product) return <p>Produit indisponible.</p>
-
+      .then((product) => {
+        if (active) setResult({ id: productId, product });
+      })
+      .catch(() => {
+        if (active)
+          setResult({
+            id: productId,
+            error: "Produit introuvable ou service momentanément indisponible.",
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [productId, valid, attempt]);
+  const back = (
+    <Link to="/products" className="back-link">
+      ← Retour au catalogue
+    </Link>
+  );
+  if (!valid)
+    return (
+      <>
+        {back}
+        <div className="panel">
+          <EmptyState
+            icon="search"
+            title="Identifiant de produit invalide."
+            description="Retrouvez les produits disponibles dans le catalogue."
+          />
+        </div>
+      </>
+    );
+  if (!result || result.id !== productId)
+    return (
+      <>
+        {back}
+        <div className="details skeleton-details" role="status">
+          <div className="skeleton-card" />
+          <p>Chargement du produit…</p>
+        </div>
+      </>
+    );
+  if (result.error || !result.product)
+    return (
+      <>
+        {back}
+        <div className="error-state" role="alert">
+          <h1>Ce produit n’est pas disponible</h1>
+          <p>{result.error || "Produit indisponible."}</p>
+          <button
+            className="btn"
+            onClick={() => {
+              setResult(null);
+              setAttempt((value) => value + 1);
+            }}
+          >
+            Réessayer
+          </button>
+        </div>
+      </>
+    );
+  const product = result.product;
   return (
-    <section className="details">
-      <div className="details-visual" aria-hidden="true">
-        📦
-      </div>
-
-      <div>
-        <Link to="/products">← Retour au catalogue</Link>
-
-        <p className="category">{product.category.name}</p>
-        <h1>{product.name}</h1>
-        <p>{product.description || 'Aucune description.'}</p>
-        <p>Boutique : {product.shop.name}</p>
-
-        <h2 className="product-price">
-          {product.price.toLocaleString('fr-MA')} DH
-        </h2>
-
-        <p>
-          {product.stock > 0
-            ? `${product.stock} unité(s) disponibles`
-            : 'Rupture de stock'}
-        </p>
-
-        <Link to="/cart" className="btn">
-          Consulter mon panier
+    <>
+      {back}
+      <section className="details">
+        <div className="details-visual">
+          <Icon name="box" />
+          <span>Visuel non disponible</span>
+          <small>{product.category.name}</small>
+        </div>
+        <div className="details-body">
+          <span className="category">{product.category.name}</span>
+          <h1>{product.name}</h1>
+          <p className="shop-name">
+            <Icon name="shop" />
+            Boutique : {product.shop.name}
+          </p>
+          <p className="detail-price">{formatPrice(product.price)}</p>
+          <span
+            className={`stock-badge static-badge ${product.stock > 0 ? "in-stock" : "out-stock"}`}
+          >
+            {product.stock > 0
+              ? `${product.stock} unité(s) disponible(s)`
+              : "Rupture de stock"}
+          </span>
+          <div className="description">
+            <h2>À propos de ce produit</h2>
+            <p>
+              {product.description ||
+                "Aucune description disponible pour ce produit."}
+            </p>
+          </div>
+          <Link to="/cart" className="btn">
+            Consulter mon panier <Icon name="cart" />
+          </Link>
+          <p className="detail-note">
+            Le service panier n’est pas encore connecté.
+          </p>
+        </div>
+      </section>
+      <div className="info-strip">
+        <Icon name="shop" />
+        <div>
+          <strong>Continuez votre découverte</strong>
+          <p>Explorez les autres produits et boutiques de la marketplace.</p>
+        </div>
+        <Link to="/products" className="text-link">
+          Voir le catalogue <Icon name="arrow" />
         </Link>
       </div>
-    </section>
-  )
+    </>
+  );
 }

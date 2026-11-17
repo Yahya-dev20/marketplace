@@ -1,75 +1,49 @@
-# React + TypeScript + Vite
+# DevOps-M Marketplace - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Application React / TypeScript / Vite. All existing routes are preserved.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Vite serves the frontend at http://localhost:5173. The existing `/api` proxy points to `http://localhost:8080`; the gateway must already be running to display real catalog data. This frontend does not start or change backend services.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Checks
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+npm run build
+npm run lint
+npm test
 ```
+
+## Organization
+
+- `src/pages/`: eight existing pages and their page-specific interactions.
+- `src/components/`: navigation, footer, icons, headings, empty states and product cards.
+- `src/layouts/`: shared shell, document title and focus management on navigation.
+- `src/styles/main.css`: design tokens and shared desktop styles, grouped by purpose.
+- `src/styles/responsive.css`: tablet/mobile breakpoints and reduced-motion preferences.
+- `src/services/catalogApi.ts`: existing catalog HTTP calls.
+- `src/types/`: API data contracts.
+- `src/utils/`: shared price formatting.
+
+## Routes and data
+
+`/`, `/products`, `/products/:id`, `/cart`, `/orders`, `/seller`, `/notifications`, and the fallback 404 route remain available.
+
+The catalog uses `GET /api/catalog/products` and `GET /api/catalog/products/:id` without changing the API contracts. Search (`q`), category (`category`), sorting (`sort`) and availability (`available`) are kept in URL parameters. Filters and sorting run on the API response. Product images are not provided by the current contract; an explicit neutral placeholder is displayed.
+
+Cart, orders, notifications and seller management were already awaiting service integration. Their redesigned pages explain this status; they do not generate transactions, fabricated history, metrics or replacement catalog data.
+
+## Accessibility and responsive behavior
+
+Keyboard focus states, a skip link, labeled controls, an expandable mobile menu, request status messages, reduced-motion support and route focus management are included. Layouts adapt at 1100, 800, 600 and 360 pixels.
+
+Tests cover existing routes, mobile navigation, catalog filtering/sorting, URL state, API errors and retries, empty catalogs, invalid product IDs, and stale responses during product navigation. Fixtures exist only in test files and never replace production data.
+
+## Verification limitation
+
+Build, lint and automated interaction tests can be run with the commands above. Visual verification in a browser must be completed locally: browser automation was unavailable during this refactor. Check desktop, tablet and mobile widths with the real gateway running.

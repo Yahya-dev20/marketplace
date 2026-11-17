@@ -1,17 +1,17 @@
+import { Route, Routes } from "react-router";
 
-import { Route, Routes } from 'react-router'
+import MainLayout from "./layouts/MainLayout";
+import HomePage from "./pages/HomePage";
+import ProductsPage from "./pages/ProductsPage";
+import ProductDetailsPage from "./pages/ProductDetailsPage";
+import CartPage from "./pages/CartPage";
+import OrdersPage from "./pages/OrdersPage";
+import SellerPage from "./pages/SellerPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
-import MainLayout from './layouts/MainLayout'
-import HomePage from './pages/HomePage'
-import ProductsPage from './pages/ProductsPage'
-import ProductDetailsPage from './pages/ProductDetailsPage'
-import CartPage from './pages/CartPage'
-import OrdersPage from './pages/OrdersPage'
-import SellerPage from './pages/SellerPage'
-import NotificationsPage from './pages/NotificationsPage'
-import NotFoundPage from './pages/NotFoundPage'
-
-import './styles/main.css'
+import "./styles/main.css";
+import "./styles/responsive.css";
 
 export default function App() {
   return (
@@ -27,5 +27,5 @@ export default function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
-  )
+  );
 }
