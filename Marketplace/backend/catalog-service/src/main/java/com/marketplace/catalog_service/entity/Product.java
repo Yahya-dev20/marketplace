@@ -2,9 +2,11 @@
 package com.marketplace.catalog_service.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.DynamicUpdate;
 import java.math.BigDecimal;
 
 @Entity
+@DynamicUpdate
 @Table(name = "products")
 public class Product {
 
@@ -17,6 +19,9 @@ public class Product {
 
     @Column(length = 2000)
     public String description;
+
+    @Column(length = 500)
+    public String imageUrl;
 
     @Column(nullable = false, precision = 12, scale = 2)
     public BigDecimal price;

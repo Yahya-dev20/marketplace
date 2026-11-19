@@ -13,6 +13,7 @@ export type Product = {
   id: number;
   name: string;
   description: string | null;
+  imageUrl?: string | null;
   price: number;
   stock: number;
   shop: Shop;

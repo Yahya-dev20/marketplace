@@ -43,6 +43,7 @@ export default function Navbar() {
             <NavLink
               to="/cart"
               className="cart-link"
+              aria-label="Panier"
               onClick={() => setOpen(false)}
             >
               <Icon name="cart" />

@@ -313,7 +313,10 @@ select {
   width: 19px;
   height: 19px;
 }
-.btn:hover {
+.btn:disabled {
+  opacity: 0.55;
+}
+.btn:not(:disabled):hover {
   background: #103c2e;
   box-shadow: 0 5px 14px #174d3c1c;
   transform: translateY(-1px);
@@ -618,6 +621,47 @@ select {
   overflow: hidden;
   min-width: 0;
 }
+.order-panel {
+  padding: 24px;
+  overflow-wrap: anywhere;
+}
+.order-panel ul {
+  margin: 0 0 20px;
+  padding-inline-start: 20px;
+}
+.order-panel li + li {
+  margin-top: 10px;
+}
+.order-panel a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.order-panel p:last-child {
+  margin-bottom: 0;
+}
+.order-controls {
+  padding: 18px 0;
+}
+.order-controls h2 {
+  font-size: 18px;
+}
+.order-controls > p {
+  margin: 12px 0 0;
+}
+.order-panel .notification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notification-list li {
+  border-top: 1px solid var(--border);
+  padding: 16px 0;
+}
+.notification-list time {
+  color: var(--muted);
+  font-size: 13px;
+}
 .panel-heading {
   padding: 21px 25px;
   display: flex;
@@ -780,7 +824,7 @@ select:hover {
 .results-count strong {
   color: #2e4234;
 }
-.results-count span {
+.results-count span:last-child {
   margin-left: auto;
   font-size: 11px;
 }
@@ -819,6 +863,15 @@ select:hover {
   height: 190px;
   gap: 13px;
 }
+.product-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+  background: #f5f3ef;
+}
 .product-visual > .icon {
   width: 57px;
   height: 57px;
@@ -851,6 +904,17 @@ select:hover {
   display: flex;
   flex: 1;
   flex-direction: column;
+}
+.product-body > .btn {
+  gap: 0;
+  margin-top: 10px;
+  padding: 8px;
+  text-align: center;
+}
+.product-body > [role="status"] {
+  margin: 8px 0 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 .category {
   font-size: 10px;
@@ -1088,6 +1152,88 @@ select:hover {
 .seller-modules .panel {
   padding: 30px;
 }
+.seller-inventory {
+  margin-top: 20px;
+}
+.seller-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.seller-navigation [aria-pressed="false"] {
+  background: #edf2e9;
+  color: var(--green);
+}
+.seller-order + .seller-order {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+.seller-inventory h3 {
+  margin-top: 24px;
+}
+.seller-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+  margin: 16px 0;
+}
+.seller-form label,
+.seller-shop-picker,
+.seller-product label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.seller-form input,
+.seller-form select,
+.seller-form textarea,
+.seller-shop-picker select,
+.seller-product input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+.seller-form textarea {
+  resize: vertical;
+}
+.seller-shop-picker {
+  max-width: 360px;
+}
+.seller-form-wide {
+  grid-column: 1 / -1;
+}
+.seller-form .btn {
+  justify-self: start;
+}
+.order-panel .seller-products {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.seller-product,
+.seller-product form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.seller-product {
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.seller-product input {
+  max-width: 115px;
+}
 .seller-modules .icon {
   color: var(--green);
   margin-bottom: 23px;
@@ -1156,6 +1302,16 @@ select:hover {
 .details-body {
   padding: 15px 0;
 }
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.detail-actions [role="status"] {
+  flex-basis: 100%;
+  margin: 0;
+}
 .details-body h1 {
   font-size: 38px;
   margin: 14px 0 17px;
@@ -1189,11 +1345,6 @@ select:hover {
   color: var(--muted);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-.detail-note {
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 14px;
 }
 /* Feedback and loading states */
 .error-state {

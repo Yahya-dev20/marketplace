@@ -173,13 +173,17 @@ public class Order_service {
             BigDecimal subtotal = product.price()
                 .multiply(BigDecimal.valueOf(item.quantity()));
 
-            lines.add(new OrderLine(
+            OrderLine line = new OrderLine(
                 product.id(),
                 product.name(),
                 product.price(),
                 item.quantity(),
                 subtotal
-            ));
+            );
+            if (product.shop() != null) {
+                line.setSellerId(product.shop().sellerId());
+            }
+            lines.add(line);
 
             total = total.add(subtotal);
         }

@@ -17,6 +17,7 @@ export default function ProductsPage() {
   const [params, setParams] = useSearchParams();
   const search = params.get("q") || "";
   const category = params.get("category") || "";
+  const shop = params.get("shop") || "";
   const sort = params.get("sort") || "default";
   const available = params.get("available") === "true";
   const [loading, setLoading] = useState(true);
@@ -60,10 +61,15 @@ export default function ProductsPage() {
   const categories = [
     ...new Set(products.map((product) => product.category.name)),
   ].sort((a, b) => a.localeCompare(b, "fr"));
+  const shops = [...new Map(products.map((product) => [product.shop.id, product.shop])).values()]
+    .sort((a, b) => a.name.localeCompare(b.name, "fr") || a.id - b.id);
+  const query = normalize(search);
   const filtered = products.filter(
     (product) =>
-      normalize(product.name).includes(normalize(search)) &&
+      [product.name, product.description ?? "", product.shop.name]
+        .some((value) => normalize(value).includes(query)) &&
       (!category || product.category.name === category) &&
+      (!shop || String(product.shop.id) === shop) &&
       (!available || product.stock > 0),
   );
   if (sort === "price-asc") filtered.sort((a, b) => a.price - b.price);
@@ -71,7 +77,7 @@ export default function ProductsPage() {
   if (sort === "name")
     filtered.sort((a, b) => a.name.localeCompare(b.name, "fr"));
   const hasFilters = Boolean(
-    search || category || available || sort !== "default",
+    search || category || shop || available || sort !== "default",
   );
   return (
     <>
@@ -90,6 +96,7 @@ export default function ProductsPage() {
             <label htmlFor="category">Catégorie</label>
             <select
               id="category"
+              aria-label="Catégorie"
               value={category}
               onChange={(event) => update("category", event.target.value)}
             >
@@ -102,6 +109,17 @@ export default function ProductsPage() {
                   {name}
                 </option>
               ))}
+            </select>
+            <select
+              aria-label="Boutique"
+              value={shop}
+              onChange={(event) => update("shop", event.target.value)}
+            >
+              <option value="">Toutes les boutiques</option>
+              {shop && !shops.some(({ id }) => String(id) === shop) && (
+                <option value={shop}>Boutique sélectionnée</option>
+              )}
+              {shops.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
             </select>
             <label className="checkbox-label">
               <input
@@ -186,9 +204,10 @@ export default function ProductsPage() {
           {!loading && !error && (
             <>
               <p className="results-count" role="status">
-                <strong>{filtered.length}</strong> produit
-                {filtered.length > 1 ? "s" : ""} trouvé
-                {filtered.length > 1 ? "s" : ""}
+                <span>
+                  <strong>{filtered.length}</strong>{" "}
+                  {filtered.length > 1 ? "produits trouvés" : "produit trouvé"}
+                </span>
                 <span>Le choix commence ici.</span>
               </p>
               <div className="product-grid">

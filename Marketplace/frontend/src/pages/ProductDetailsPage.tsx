@@ -4,6 +4,8 @@ import { getProduct } from "../services/catalogApi";
 import type { Product } from "../types/catalog";
 import Icon from "../components/Icon";
 import EmptyState from "../components/EmptyState";
+import AddToCartButton from "../components/AddToCartButton";
+import ProductImage from "../components/ProductImage";
 import { formatPrice } from "../utils/format";
 type Result = { id: number; product?: Product; error?: string };
 export default function ProductDetailsPage() {
@@ -83,8 +85,7 @@ export default function ProductDetailsPage() {
       {back}
       <section className="details">
         <div className="details-visual">
-          <Icon name="box" />
-          <span>Visuel non disponible</span>
+          <ProductImage url={product.imageUrl} loading="eager" />
           <small>{product.category.name}</small>
         </div>
         <div className="details-body">
@@ -108,13 +109,18 @@ export default function ProductDetailsPage() {
               {product.description ||
                 "Aucune description disponible pour ce produit."}
             </p>
+            {product.imageUrl?.startsWith("/products/commons-") && (
+              <a className="text-link" href={`/products/credits.html#produit-${product.id}`}>
+                Photo d’illustration et crédits
+              </a>
+            )}
           </div>
-          <Link to="/cart" className="btn">
-            Consulter mon panier <Icon name="cart" />
-          </Link>
-          <p className="detail-note">
-            Le service panier n’est pas encore connecté.
-          </p>
+          <div className="detail-actions">
+            <AddToCartButton key={product.id} product={product} />
+            <Link to="/cart" className="text-link">
+              Consulter mon panier <Icon name="cart" />
+            </Link>
+          </div>
         </div>
       </section>
       <div className="info-strip">

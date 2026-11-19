@@ -6,5 +6,12 @@ public record CatalogProduct(
     Long id,
     String name,
     BigDecimal price,
-    Integer stock
-) {}
+    Integer stock,
+    Shop shop
+) {
+    public record Shop(Long sellerId) {}
+
+    public CatalogProduct(Long id, String name, BigDecimal price, Integer stock) {
+        this(id, name, price, stock, null);
+    }
+}

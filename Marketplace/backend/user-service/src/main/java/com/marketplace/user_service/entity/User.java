@@ -2,6 +2,7 @@
 package com.marketplace.user_service.entity;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 
 @Entity
 @Table(name = "users")
@@ -20,6 +21,19 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    private String passwordHash;
+    @Column(unique = true, length = 64)
+    private String sellerTokenHash;
+    private Instant sellerTokenExpiresAt;
+
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String value) { passwordHash = value; }
+    public Instant getSellerTokenExpiresAt() { return sellerTokenExpiresAt; }
+    public void setSellerSession(String tokenHash, Instant expiresAt) {
+        sellerTokenHash = tokenHash;
+        sellerTokenExpiresAt = expiresAt;
+    }
 
     public User() {
     }

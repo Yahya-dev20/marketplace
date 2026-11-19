@@ -1,40 +1,45 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import PageHeading from "../components/PageHeading";
-import EmptyState from "../components/EmptyState";
-import Icon from "../components/Icon";
+import { DEMO_USER_ID } from "../services/cartApi";
+import { getOrders, type Order } from "../services/orderApi";
+import { formatPrice } from "../utils/format";
+import { formatOrderDate, orderStatusLabel } from "../utils/order";
+
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>();
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getOrders(DEMO_USER_ID)
+      .then((result) => {
+        if (active) setOrders(result.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id));
+      })
+      .catch(() => { if (active) setError(true); });
+    return () => { active = false; };
+  }, []);
+
   return (
     <>
-      <PageHeading
-        eyebrow="VOTRE ESPACE ACHATS"
-        title="Mes commandes"
-        description="Un espace dédié à vos achats et à leur suivi."
-      />
-      <section className="panel">
-        <div className="panel-heading">
-          <h2>Historique des commandes</h2>
-          <Icon name="box" />
-        </div>
-        <EmptyState
-          icon="box"
-          title="Vos commandes auront leur place ici"
-          description="Vous pourrez consulter vos achats et suivre leur statut depuis cet espace."
-        >
-          <p className="service-notice">
-            Le service commandes n’est pas encore connecté. Aucun historique ne
-            peut être affiché pour le moment.
-          </p>
-        </EmptyState>
+      <PageHeading eyebrow="VOTRE ESPACE ACHATS" title="Mes commandes"
+        description="Consultez l’historique et le statut de vos commandes." />
+      <section className="panel order-panel">
+        {error && <p role="alert">Impossible de charger les commandes.</p>}
+        {!orders && !error && <p role="status">Chargement des commandes…</p>}
+        {orders?.length === 0 && <p>Vous n’avez encore passé aucune commande.</p>}
+        {orders && orders.length > 0 && (
+          <ul>
+            {orders.map((order) => (
+              <li key={order.id}>
+                <Link to={`/orders/${order.id}`}>Commande n° {order.id}</Link>
+                {" · "}<time dateTime={order.createdAt}>{formatOrderDate(order.createdAt)}</time>
+                {" · "}{orderStatusLabel[order.status]}{" · "}{formatPrice(order.total)}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
-      <div className="info-strip">
-        <Icon name="search" />
-        <div>
-          <strong>En attendant, faites de nouvelles découvertes.</strong>
-          <p>
-            Le catalogue vous permet de consulter les prix et les disponibilités
-            des produits.
-          </p>
-        </div>
-      </div>
     </>
   );
 }

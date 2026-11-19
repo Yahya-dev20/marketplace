@@ -6,6 +6,7 @@ const titles: Record<string, string> = {
   "/": "Accueil",
   "/products": "Catalogue",
   "/cart": "Mon panier",
+  "/checkout": "Récapitulatif de commande",
   "/orders": "Mes commandes",
   "/seller": "Espace vendeur",
   "/notifications": "Mes notifications",
@@ -15,7 +16,12 @@ export default function MainLayout() {
   const main = useRef<HTMLElement>(null);
   const previous = useRef(pathname);
   useEffect(() => {
-    document.title = `${titles[pathname] || (pathname.startsWith("/products/") ? "Fiche produit" : "Page introuvable")} | DevOps-M`;
+    const route = pathname.replace(/\/+$/, "") || "/";
+    const title =
+      titles[route] ||
+      (/^\/products\/[^/]+$/.test(route) ? "Fiche produit" :
+        /^\/orders\/[^/]+$/.test(route) ? "Détail de commande" : "Page introuvable");
+    document.title = `${title} | DevOps-M`;
     if (previous.current !== pathname) {
       window.scrollTo?.({ top: 0, behavior: "instant" });
       main.current?.focus();

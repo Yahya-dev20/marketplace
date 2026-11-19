@@ -73,6 +73,7 @@ public class UserService {
     // Modifier un utilisateur
     public UserResponse update(Long id, UserRequest request) {
         User user = getUser(id);
+        requireUnmanagedAccount(user);
 
         if (!user.getEmail().equals(request.email())
                 && repository.existsByEmail(request.email())) {
@@ -92,6 +93,13 @@ public class UserService {
     // Supprimer un utilisateur
     public void delete(Long id) {
         User user = getUser(id);
+        requireUnmanagedAccount(user);
         repository.delete(user);
+    }
+
+    private void requireUnmanagedAccount(User user) {
+        if (user.getPasswordHash() != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte vendeur protégé");
+        }
     }
 }

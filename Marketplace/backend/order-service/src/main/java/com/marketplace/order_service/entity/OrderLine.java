@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 public class OrderLine {
 
     private Long productId;
+    private Long sellerId;
     private String productName;
 
     @Column(precision = 12, scale = 2)
@@ -34,6 +35,8 @@ public class OrderLine {
         this.subtotal = subtotal;
     }
 
+    public void setSellerId(Long sellerId) { this.sellerId = sellerId; }
+    public Long getSellerId() { return sellerId; }
     public Long getProductId() { return productId; }
     public String getProductName() { return productName; }
     public BigDecimal getUnitPrice() { return unitPrice; }

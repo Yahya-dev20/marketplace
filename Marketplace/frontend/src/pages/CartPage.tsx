@@ -263,17 +263,12 @@ export default function CartPage() {
 
             <p className="cart-note">
               Le paiement sera simulé lors de la commande.
-              Aucun paiement réel n’est effectué.
             </p>
 
-            <Link to="/orders" className="btn cart-checkout">
-              Voir mes commandes
+            <Link to="/checkout" className="btn cart-checkout">
+              Passer à la commande
             </Link>
 
-            <p className="cart-note">
-              La validation du panier sera connectée à
-              Order Service dans l’étape suivante.
-            </p>
           </aside>
 
         </div>
