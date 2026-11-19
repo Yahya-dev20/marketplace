@@ -1,8 +1,27 @@
+import { useState } from "react";
 import { Link } from "react-router";
+import { addToCart, DEMO_USER_ID } from "../services/cartApi";
 import type { Product } from "../types/catalog";
 import Icon from "./Icon";
 import { formatPrice } from "../utils/format";
 export default function ProductCard({ product }: { product: Product }) {
+  const [adding, setAdding] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleAddToCart() {
+    setAdding(true);
+    setMessage("");
+
+    try {
+      await addToCart(DEMO_USER_ID, product.id, 1);
+      setMessage("Produit ajouté au panier.");
+    } catch {
+      setMessage("Impossible d'ajouter ce produit.");
+    } finally {
+      setAdding(false);
+    }
+  }
+
   return (
     <article className="product-card">
       <Link
@@ -39,6 +58,15 @@ export default function ProductCard({ product }: { product: Product }) {
             <Icon name="arrow" />
           </Link>
         </div>
+        <button
+          type="button"
+          className="btn"
+          disabled={adding || product.stock <= 0}
+          onClick={handleAddToCart}
+        >
+          {adding ? "Ajout en cours..." : "Ajouter au panier"}
+        </button>
+        {message && <p role="status">{message}</p>}
         <p className="stock-count">
           {product.stock > 0
             ? `${product.stock} unité(s) disponible(s)`
